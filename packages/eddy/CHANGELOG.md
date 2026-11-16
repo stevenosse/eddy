@@ -1,3 +1,7 @@
+## 0.1.3
+
+- Fix: `watchOrNull` followed by `watch` on the same query failed with a cast error (the cache entry took the nullable type).
+
 ## 0.1.2
 
 - `package:eddy_flutter/testing.dart` re-exports the testing helpers.

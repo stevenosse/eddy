@@ -124,6 +124,14 @@ void main() {
       expect(await client.fetch(lenient), -1);
     });
 
+    test('watchOrNull then watch on the same query', () async {
+      final base = Query((q) => 1);
+      final lenient = Query((q) async => await q.watchOrNull(base) ?? 0);
+      final strict = Query((q) async => await q.watch(base) + 1);
+      expect(await client.fetch(lenient), 1);
+      expect(await client.fetch(strict), 2);
+    });
+
     test('diamond: every query reads the new values', () async {
       final source = Source([1, 2]);
       final root = Query(source.call);

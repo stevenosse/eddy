@@ -67,6 +67,11 @@ class Query<T> {
   @internal
   FutureOr<T> run(QueryRef q) => _fetch(q);
 
+  /// Calls [f] with this query's own value type, whatever static type the caller sees it with
+  /// (a `Query<int>` read as a `Query<int?>` still gives `int`). Used by [QueryClient].
+  @internal
+  R withValueType<R>(R Function<X>(Query<X> query) f) => f<T>(this);
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

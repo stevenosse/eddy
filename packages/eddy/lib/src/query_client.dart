@@ -154,7 +154,9 @@ class QueryClient {
     }
   }
 
-  _Entry<T> _entryFor<T>(Query<T> query) => (_entries[query] ??= _Entry<T>(query, this)) as _Entry<T>;
+  // The entry gets the query's own value type: a caller may see it with a wider one.
+  _Entry<T> _entryFor<T>(Query<T> query) =>
+      (_entries[query] ??= query.withValueType(<X>(q) => _Entry<X>(q, this))) as _Entry<T>;
 
   void _start(_Entry<Object?> entry) {
     if (entry.started) return;
@@ -398,7 +400,7 @@ class _Ref implements QueryRef {
   @override
   Future<T?> watchOrNull<T>(Query<T> query) async {
     try {
-      return await watch(query);
+      return await watch<T>(query);
     } catch (_) {
       return null;
     }
