@@ -1,0 +1,12 @@
+name: eddy_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - packages/eddy
+  - packages/eddy_flutter
+
+dev_dependencies:
+  lints: ^6.0.0
