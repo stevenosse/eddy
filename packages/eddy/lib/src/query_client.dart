@@ -40,7 +40,8 @@ class QueryClient {
 
   final DependencyResolver? _resolve;
 
-  /// How long an unused query stays cached before being disposed.
+  /// How long an unused query stays cached before being disposed. With [Duration.zero], it is
+  /// disposed in a microtask, which leaves no timer pending (handy in widget tests).
   final Duration disposeDelay;
 
   final Map<Query<Object?>, _Entry<Object?>> _entries = {};
@@ -218,9 +219,15 @@ class QueryClient {
 
   void _scheduleDisposal(_Entry<Object?> entry) {
     if (entry.isUsed || entry.query.keepAlive || entry.removed) return;
+    void disposeIfUnused() {
+      if (!entry.isUsed && !entry.query.keepAlive) _remove(entry);
+    }
+
+    // Without delay, a microtask: no timer left pending (widget tests check that).
+    if (disposeDelay == Duration.zero) return scheduleMicrotask(disposeIfUnused);
     entry.disposalTimer ??= Timer(disposeDelay, () {
       entry.disposalTimer = null;
-      if (!entry.isUsed && !entry.query.keepAlive) _remove(entry);
+      disposeIfUnused();
     });
   }
 

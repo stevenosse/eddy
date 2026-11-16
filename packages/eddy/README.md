@@ -33,8 +33,11 @@ final todo = Query.family((String id, q) => q.dep<TodoRepository>().byId(id), ke
 // Derived: q.watch returns the value and subscribes. If the dependency fails, so does this query.
 final selectedTodo = Query((q) async => q.watch(todo(await q.watch(selectedId))));
 final summary = Query((q) async {
-  final (all, stats) = await (q.watch(todos), q.watchOrNull(statsQuery)).wait; // stats may fail
-  return Summary(all, stats);
+  // Start both, then await: they load in parallel. Avoid `(a, b).wait`, which wraps errors in a
+  // ParallelWaitError instead of failing with the dependency's own error.
+  final stats = q.watchOrNull(statsQuery); // may fail without failing the summary
+  final all = await q.watch(todos);
+  return Summary(all, await stats);
 });
 ```
 
@@ -58,7 +61,7 @@ Rules worth knowing:
 - It is recomputed when a query it watched is refreshed, invalidated or set. Every affected query is marked as running before any recomputation starts, so a diamond never reads stale values.
 - **Refresh vs. reload.** While recomputing, the previous value is kept (`AsyncLoading.withPrevious`). If the new computation watches a query it did not watch before (another identifier, say), the previous value is about another subject and is dropped.
 - A result that arrives after a newer computation started is ignored.
-- A query nobody listens to, directly or through another query, is disposed after `disposeDelay` (30 s by default), unless it is `keepAlive`.
+- A query nobody listens to, directly or through another query, is disposed after `disposeDelay` (30 s by default), unless it is `keepAlive`. With `Duration.zero` it is disposed in a microtask, so widget tests end with no pending timer.
 - `invalidate` recomputes queries in use and drops unused cached ones.
 
 ## Flows
