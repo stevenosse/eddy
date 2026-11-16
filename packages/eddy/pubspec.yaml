@@ -1,6 +1,6 @@
 name: eddy
 description: Queries and flows for Dart. Shared async data with dependency tracking, caching and tag invalidation, plus small state holders that react to it.
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/stevenosse/eddy
 resolution: workspace
 topics:

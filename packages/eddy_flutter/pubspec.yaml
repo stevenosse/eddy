@@ -1,6 +1,6 @@
 name: eddy_flutter
 description: Flutter bindings for eddy. Scopes, FlowView with state reactions, and AsyncView.
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/stevenosse/eddy
 resolution: workspace
 topics:
