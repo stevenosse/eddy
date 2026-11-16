@@ -163,6 +163,21 @@ void main() {
       expect(leaf.calls, 2);
     });
 
+    test('a failed refresh of a dependency keeps the derived value next to the error', () async {
+      var fail = false;
+      final selected = Query((q) => 'a');
+      final base = Query((q) => fail ? throw 'offline' : 1);
+      // Reads another query first: the failing one is watched again only after an await.
+      final derived = Query((q) async {
+        await q.watch(selected);
+        return await q.watch(base) * 10;
+      });
+      client.listen(derived, (_) {});
+      await settle(client);
+      fail = true;
+      expect(await client.refresh(derived), const AsyncFailure.withPrevious('offline', 10));
+    });
+
     test('a failed refresh keeps the value next to the error', () async {
       var fail = false;
       final query = Query((q) => fail ? throw 'offline' : 1);

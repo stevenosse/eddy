@@ -187,13 +187,23 @@ class QueryClient {
   void _fetch(_Entry<Object?> entry) {
     final generation = entry.generation;
     final previousDependencies = entry.dependencies;
+    // The previous dependencies stay held until the computation settles: it is about to read most
+    // of them again, and releasing them now could dispose them in between.
+    entry.heldDependencies.addAll(previousDependencies);
     entry.dependencies = {};
-    for (final dependency in previousDependencies) {
+    unawaited(
+      entry.runAndSettle(_Ref(this, entry, generation, previousDependencies)).whenComplete(() => _releaseHeld(entry)),
+    );
+  }
+
+  /// Once the latest computation settled, lets go of the dependencies it did not read again.
+  void _releaseHeld(_Entry<Object?> entry) {
+    if (entry.isRunning || entry.removed) return;
+    for (final dependency in entry.heldDependencies.difference(entry.dependencies)) {
       dependency.dependents.remove(entry);
+      _scheduleDisposal(dependency);
     }
-    unawaited(entry.runAndSettle(_Ref(this, entry, generation, previousDependencies)));
-    // Watching them again cancels this.
-    previousDependencies.forEach(_scheduleDisposal);
+    entry.heldDependencies.clear();
   }
 
   void _runningChanged(int delta) {
@@ -237,11 +247,12 @@ class QueryClient {
     if (entry.removed) return;
     if (identical(_entries[entry.query], entry)) _entries.remove(entry.query);
     entry.dispose();
-    for (final dependency in entry.dependencies) {
+    for (final dependency in {...entry.dependencies, ...entry.heldDependencies}) {
       dependency.dependents.remove(entry);
       _scheduleDisposal(dependency);
     }
     entry.dependencies = {};
+    entry.heldDependencies.clear();
   }
 }
 
@@ -254,6 +265,9 @@ class _Entry<T> {
   final List<_Listener<T>> listeners = [];
   final Set<_Entry<Object?>> dependents = {};
   Set<_Entry<Object?>> dependencies = {};
+
+  /// Dependencies of an earlier computation, kept until the current one settles.
+  final Set<_Entry<Object?>> heldDependencies = {};
   int generation = 0;
   bool started = false;
   bool removed = false;
